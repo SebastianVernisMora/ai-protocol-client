@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Protocol Dashboard - Monitoreo de Tareas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            grid-template-rows: 70px 1fr;
+            grid-template-areas: 
+                "sidebar header"
+                "sidebar main";
+            height: 100vh;
+        }
+
+        .header {
+            grid-area: header;
+            background: rgba(255,255,255,0.1);
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 300;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online { background-color: #4CAF50; }
+        .status-dot.warning { background-color: #FF9800; }
+        .status-dot.offline { background-color: #F44336; }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .sidebar {
+            grid-area: sidebar;
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .sidebar h2 {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            color: #B0BEC5;
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            background: rgba(33,150,243,0.3);
+            border-left: 3px solid #2196F3;
+        }
+
+        .main-content {
+            grid-area: main;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 300;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.3s ease;
+        }
+
+        .tasks-container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .tasks-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 20px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: rgba(33,150,243,0.5);
+        }
+
+        .task-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #2196F3;
+            transition: all 0.3s ease;
+        }
+
+        .task-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .task-id {
+            font-weight: 500;
+            color: #81C784;
+        }
+
+        .task-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-running { background-color: rgba(33,150,243,0.3); border: 1px solid #2196F3; }
+        .status-completed { background-color: rgba(76,175,80,0.3); border: 1px solid #4CAF50; }
+        .status-failed { background-color: rgba(244,67,54,0.3); border: 1px solid #F44336; }
+        .status-queued { background-color: rgba(255,152,0,0.3); border: 1px solid #FF9800; }
+
+        .task-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #B0BEC5;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30,60,114,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #fff;
+        }
+
+        .log-container {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            margin-top: 15px;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #F44336;
+            color: white;
+        }
+
+        .btn-success {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+            transform: translateY(-2px);
+        }
+
+        .new-task-form {
+            display: grid;
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            color: #B0BEC5;
+        }
+
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .form-group select option {
+            background: #1e3c72;
+            color: #fff;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .chart-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+                grid-template-areas: 
+                    "header"
+                    "main";
+            }
+            
+            .sidebar {
+                display: none;
+            }
+            
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <header class="header">
+            <h1>🤖 AI Protocol Dashboard</h1>
+            <div class="status-indicator">
+                <div class="status-dot online" id="connectionStatus"></div>
+                <span id="connectionText">Sistema Online</span>
+                <button class="btn btn-primary" onclick="refreshData()">🔄 Actualizar</button>
+            </div>
+        </header>
+
+        <aside class="sidebar">
+            <h2>📊 Panel de Control</h2>
+            <div class="nav-item active" onclick="showSection('overview')">
+                📈 Resumen General
+            </div>
+            <div class="nav-item" onclick="showSection('tasks')">
+                📋 Gestión de Tareas
+            </div>
+            <div class="nav-item" onclick="showSection('hosts')">
+                🖥️ Servidores SSH
+            </div>
+            <div class="nav-item" onclick="showSection('logs')">
+                📄 Logs del Sistema
+            </div>
+            <div class="nav-item" onclick="showSection('settings')">
+                ⚙️ Configuración
+            </div>
+            <div class="nav-item" onclick="openNewTaskModal()">
+                ➕ Nueva Tarea
+            </div>
+        </aside>
+
+        <main class="main-content" id="mainContent">
+            <!-- Overview Section -->
+            <div id="overview" class="section">
+                <div class="cards-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🚀 Tareas Activas</div>
+                        </div>
+                        <div class="card-value" id="activeTasks">0</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 65%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">✅ Completadas Hoy</div>
+                        </div>
+                        <div class="card-value" id="completedToday">0</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 80%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🖥️ Servidores Online</div>
+                        </div>
+                        <div class="card-value" id="serversOnline">0</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 90%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">⚡ Uso CPU Promedio</div>
+                        </div>
+                        <div class="card-value" id="avgCpu">0%</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 45%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>📊 Distribución por Herramienta</h3>
+                        <canvas id="toolChart" width="300" height="200"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>📈 Tareas por Hora</h3>
+                        <canvas id="timeChart" width="300" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasks Section -->
+            <div id="tasks" class="section" style="display: none;">
+                <div class="tasks-container">
+                    <div class="tasks-header">
+                        <h2>📋 Gestión de Tareas</h2>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" onclick="filterTasks('all')">Todas</button>
+                            <button class="filter-btn" onclick="filterTasks('running')">Ejecutándose</button>
+                            <button class="filter-btn" onclick="filterTasks('completed')">Completadas</button>
+                            <button class="filter-btn" onclick="filterTasks('failed')">Fallidas</button>
+                        </div>
+                    </div>
+                    <div id="tasksList">
+                        <!-- Tasks will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hosts Section -->
+            <div id="hosts" class="section" style="display: none;">
+                <div class="tasks-container">
+                    <h2>🖥️ Estado de Servidores SSH</h2>
+                    <div id="hostsList">
+                        <!-- Hosts will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Section -->
+            <div id="logs" class="section" style="display: none;">
+                <div class="tasks-container">
+                    <h2>📄 Logs del Sistema</h2>
+                    <div class="log-container" id="systemLogs">
+                        <!-- Logs will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div id="settings" class="section" style="display: none;">
+                <div class="tasks-container">
+                    <h2>⚙️ Configuración del Sistema</h2>
+                    <div class="form-group">
+                        <label>Intervalo de Actualización (segundos)</label>
+                        <input type="number" id="refreshInterval" value="30">
+                    </div>
+                    <div class="form-group">
+                        <label>Límite de Logs Mostrados</label>
+                        <input type="number" id="logLimit" value="100">
+                    </div>
+                    <div class="control-buttons">
+                        <button class="btn btn-success" onclick="saveSettings()">Guardar Configuración</button>
+                        <button class="btn btn-primary" onclick="exportData()">Exportar Datos</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Task Details Modal -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTaskId">Detalle de Tarea</h2>
+            <div id="modalContent">
+                <!-- Task details will be loaded here -->
+            </div>
+            <div class="control-buttons">
+                <button class="btn btn-primary" onclick="viewTaskLogs()">Ver Logs</button>
+                <button class="btn btn-danger" onclick="killTask()">Terminar Tarea</button>
+                <button class="btn btn-success" onclick="restartTask()">Reiniciar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Task Modal -->
+    <div id="newTaskModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeNewTaskModal()">&times;</span>
+            <h2>➕ Nueva Tarea de IA</h2>
+            <form class="new-task-form" id="newTaskForm">
+                <div class="form-group">
+                    <label>Herramienta</label>
+                    <select id="taskTool" required>
+                        <option value="crush">Crush - Análisis de Código</option>
+                        <option value="blackbox">Blackbox - Generación de Código</option>
+                        <option value="qwen">Qwen - Procesamiento de Lenguaje</option>
+                        <option value="gemini">Gemini - Análisis Multimodal</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Servidor SSH</label>
+                    <select id="taskHost" required>
+                        <option value="server1">Server 1 (192.168.1.100)</option>
+                        <option value="server2">Server 2 (192.168.1.101)</option>
+                        <option value="server3">Server 3 (cloud.example.com)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Comando</label>
+                    <input type="text" id="taskCommand" placeholder="ej: analyze-project" required>
+                </div>
+                <div class="form-group">
+                    <label>Parámetros (JSON)</label>
+                    <textarea id="taskParams" rows="4" placeholder='{"path": "/home/user/project", "output": "results/"}'></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Prioridad</label>
+                    <select id="taskPriority">
+                        <option value="low">Baja</option>
+                        <option value="medium" selected>Media</option>
+                        <option value="high">Alta</option>
+                        <option value="critical">Crítica</option>
+                    </select>
+                </div>
+                <div class="control-buttons">
+                    <button type="submit" class="btn btn-success">🚀 Ejecutar Tarea</button>
+                    <button type="button" class="btn btn-primary" onclick="scheduleTask()">⏰ Programar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentSection = 'overview';
+        let refreshIntervalId;
+        let taskData = [];
+        let hostData = [];
+        let selectedTaskId = null;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+            startAutoRefresh();
+        });
+
+        function initializeDashboard() {
+            loadMockData();
+            updateOverview();
+            updateTasks();
+            updateHosts();
+            updateLogs();
+            drawCharts();
+        }
+
+        function loadMockData() {
+            // Simulate task data
+            taskData = [
+                {
+                    id: 'task-001',
+                    tool: 'crush',
+                    host: 'server1',
+                    command: 'analyze-codebase',
+                    status: 'running',
+                    progress: 65,
+                    startTime: '2024-10-25 10:30:00',
+                    estimatedCompletion: '2024-10-25 11:00:00'
+                },
+                {
+                    id: 'task-002',
+                    tool: 'blackbox',
+                    host: 'server2',
+                    command: 'generate-api',
+                    status: 'completed',
+                    progress: 100,
+                    startTime: '2024-10-25 09:15:00',
+                    completionTime: '2024-10-25 09:30:00'
+                },
+                {
+                    id: 'task-003',
+                    tool: 'qwen',
+                    host: 'server1',
+                    command: 'process-documents',
+                    status: 'failed',
+                    progress: 45,
+                    startTime: '2024-10-25 08:45:00',
+                    errorMessage: 'Connection timeout'
+                },
+                {
+                    id: 'task-004',
+                    tool: 'gemini',
+                    host: 'server3',
+                    command: 'analyze-media',
+                    status: 'queued',
+                    progress: 0,
+                    queuePosition: 2
+                }
+            ];
+
+            // Simulate host data
+            hostData = [
+                {
+                    id: 'server1',
+                    name: 'Production Server 1',
+                    ip: '192.168.1.100',
+                    status: 'online',
+                    cpu: 45,
+                    memory: 68,
+                    activeTasks: 2,
+                    lastPing: '2024-10-25 10:45:00'
+                },
+                {
+                    id: 'server2',
+                    name: 'Development Server',
+                    ip: '192.168.1.101',
+                    status: 'online',
+                    cpu: 23,
+                    memory: 34,
+                    activeTasks: 1,
+                    lastPing: '2024-10-25 10:44:58'
+                },
+                {
+                    id: 'server3',
+                    name: 'Cloud Instance',
+                    ip: 'cloud.example.com',
+                    status: 'warning',
+                    cpu: 78,
+                    memory: 89,
+                    activeTasks: 0,
+                    lastPing: '2024-10-25 10:43:15'
+                }
+            ];
+        }
+
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+
+            // Remove active class from nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(sectionName).style.display = 'block';
+            event.target.classList.add('active');
+            currentSection = sectionName;
+
+            // Update section data
+            switch(sectionName) {
+                case 'overview':
+                    updateOverview();
+                    drawCharts();
+                    break;
+                case 'tasks':
+                    updateTasks();
+                    break;
+                case 'hosts':
+                    updateHosts();
+                    break;
+                case 'logs':
+                    updateLogs();
+                    break;
+            }
+        }
+
+        function updateOverview() {
+            const activeTasks = taskData.filter(task => task.status === 'running').length;
+            const completedToday = taskData.filter(task => task.status === 'completed').length;
+            const onlineServers = hostData.filter(host => host.status === 'online').length;
+            const avgCpu = Math.round(hostData.reduce((sum, host) => sum + host.cpu, 0) / hostData.length);
+
+            document.getElementById('activeTasks').textContent = activeTasks;
+            document.getElementById('completedToday').textContent = completedToday;
+            document.getElementById('serversOnline').textContent = onlineServers;
+            document.getElementById('avgCpu').textContent = avgCpu + '%';
+        }
+
+        function updateTasks() {
+            const tasksList = document.getElementById('tasksList');
+            tasksList.innerHTML = '';
+
+            taskData.forEach(task => {
+                const taskItem = createTaskElement(task);
+                tasksList.appendChild(taskItem);
+            });
+        }
+
+        function createTaskElement(task) {
+            const div = document.createElement('div');
+            div.className = 'task-item';
+            div.onclick = () => openTaskModal(task.id);
+
+            const statusClass = `status-${task.status}`;
+            const toolIcon = getToolIcon(task.tool);
+
+            div.innerHTML = `
+                <div class="task-header">
+                    <span class="task-id">${toolIcon} ${task.id}</span>
+                    <span class="task-status ${statusClass}">${task.status.toUpperCase()}</span>
+                </div>
+                <div class="task-details">
+                    <span>🖥️ ${task.host} | 🔧 ${task.command}</span>
+                    <span>${task.startTime}</span>
+                </div>
+                ${task.progress !== undefined ? `
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${task.progress}%"></div>
+                    </div>
+                ` : ''}
+            `;
+
+            return div;
+        }
+
+        function updateHosts() {
+            const hostsList = document.getElementById('hostsList');
+            hostsList.innerHTML = '';
+
+            hostData.forEach(host => {
+                const hostItem = createHostElement(host);
+                hostsList.appendChild(hostItem);
+            });
+        }
+
+        function createHostElement(host) {
+            const div = document.createElement('div');
+            div.className = 'task-item';
+
+            const statusClass = `status-${host.status === 'online' ? 'completed' : host.status === 'warning' ? 'queued' : 'failed'}`;
+
+            div.innerHTML = `
+                <div class="task-header">
+                    <span class="task-id">🖥️ ${host.name}</span>
+                    <span class="task-status ${statusClass}">${host.status.toUpperCase()}</span>
+                </div>
+                <div class="task-details">
+                    <span>📍 ${host.ip} | 🚀 ${host.activeTasks} tareas activas</span>
+                    <span>Last ping: ${host.lastPing}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px;">
+                    <div>
+                        <small>CPU: ${host.cpu}%</small>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${host.cpu}%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <small>Memory: ${host.memory}%</small>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${host.memory}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return div;
+        }
+
+        function updateLogs() {
+            const logsContainer = document.getElementById('systemLogs');
+            const mockLogs = [
+                '[2024-10-25 10:45:23] INFO: Task task-001 started on server1',
+                '[2024-10-25 10:44:15] SUCCESS: Task task-002 completed successfully',
+                '[2024-10-25 10:43:08] ERROR: Task task-003 failed - Connection timeout',
+                '[2024-10-25 10:42:30] INFO: Server server3 CPU usage high (78%)',
+                '[2024-10-25 10:41:45] INFO: New task task-004 queued for execution',
+                '[2024-10-25 10:40:12] INFO: Heartbeat received from all servers',
+                '[2024-10-25 10:39:28] WARNING: Server server3 response time increased',
+                '[2024-10-25 10:38:55] INFO: Dashboard accessed from 192.168.1.50'
+            ];
+
+            logsContainer.innerHTML = mockLogs.join('\n');
+        }
+
+        function getToolIcon(tool) {
+            const icons = {
+                'crush': '🔧',
+                'blackbox': '📦',
+                'qwen': '🧠',
+                'gemini': '💎'
+            };
+            return icons[tool] || '🤖';
+        }
+
+        function filterTasks(status) {
+            // Remove active class from all filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Add active class to clicked button
+            event.target.classList.add('active');
+
+            // Filter and display tasks
+            const tasksList = document.getElementById('tasksList');
+            tasksList.innerHTML = '';
+
+            const filteredTasks = status === 'all' ? taskData : taskData.filter(task => task.status === status);
+            
+            filteredTasks.forEach(task => {
+                const taskItem = createTaskElement(task);
+                tasksList.appendChild(taskItem);
+            });
+        }
+
+        function openTaskModal(taskId) {
+            selectedTaskId = taskId;
+            const task = taskData.find(t => t.id === taskId);
+            
+            if (!task) return;
+
+            document.getElementById('modalTaskId').textContent = `Tarea: ${task.id}`;
+            document.getElementById('modalContent').innerHTML = `
+                <div class="form-group">
+                    <strong>Herramienta:</strong> ${getToolIcon(task.tool)} ${task.tool}
+                </div>
+                <div class="form-group">
+                    <strong>Servidor:</strong> ${task.host}
+                </div>
+                <div class="form-group">
+                    <strong>Comando:</strong> ${task.command}
+                </div>
+                <div class="form-group">
+                    <strong>Estado:</strong> <span class="task-status status-${task.status}">${task.status}</span>
+                </div>
+                <div class="form-group">
+                    <strong>Progreso:</strong> ${task.progress || 0}%
+                    ${task.progress !== undefined ? `
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${task.progress}%"></div>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="form-group">
+                    <strong>Inicio:</strong> ${task.startTime}
+                </div>
+                ${task.completionTime ? `
+                    <div class="form-group">
+                        <strong>Finalización:</strong> ${task.completionTime}
+                    </div>
+                ` : ''}
+                ${task.errorMessage ? `
+                    <div class="form-group">
+                        <strong>Error:</strong> <span style="color: #F44336">${task.errorMessage}</span>
+                    </div>
+                ` : ''}
+            `;
+
+            document.getElementById('taskModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('taskModal').style.display = 'none';
+            selectedTaskId = null;
+        }
+
+        function openNewTaskModal() {
+            document.getElementById('newTaskModal').style.display = 'block';
+        }
+
+        function closeNewTaskModal() {
+            document.getElementById('newTaskModal').style.display = 'none';
+            document.getElementById('newTaskForm').reset();
+        }
+
+        function viewTaskLogs() {
+            if (!selectedTaskId) return;
+            
+            const mockLogs = `
+[2024-10-25 10:30:00] Starting task ${selectedTaskId}
+[2024-10-25 10:30:05] Initializing ${selectedTaskId.includes('crush') ? 'Crush' : 'AI'} environment
+[2024-10-25 10:30:10] Loading project files...
+[2024-10-25 10:30:15] Analyzing structure...
+[2024-10-25 10:30:30] Processing 45 files
+[2024-10-25 10:30:45] Progress: 65% complete
+[2024-10-25 10:30:50] Current operation: dependency analysis
+            `;
+
+            document.getElementById('modalContent').innerHTML = `
+                <h3>📄 Logs de la Tarea</h3>
+                <div class="log-container">${mockLogs}</div>
+            `;
+        }
+
+        function killTask() {
+            if (!selectedTaskId) return;
+            
+            if (confirm(`¿Estás seguro de que quieres terminar la tarea ${selectedTaskId}?`)) {
+                // Simulate killing task
+                const task = taskData.find(t => t.id === selectedTaskId);
+                if (task) {
+                    task.status = 'failed';
+                    task.errorMessage = 'Task killed by user';
+                }
+                
+                updateTasks();
+                updateOverview();
+                closeModal();
+                
+                alert('Tarea terminada exitosamente');
+            }
+        }
+
+        function restartTask() {
+            if (!selectedTaskId) return;
+            
+            if (confirm(`¿Quieres reiniciar la tarea ${selectedTaskId}?`)) {
+                // Simulate restarting task
+                const task = taskData.find(t => t.id === selectedTaskId);
+                if (task) {
+                    task.status = 'running';
+                    task.progress = 0;
+                    task.startTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                    delete task.errorMessage;
+                }
+                
+                updateTasks();
+                updateOverview();
+                closeModal();
+                
+                alert('Tarea reiniciada exitosamente');
+            }
+        }
+
+        function refreshData() {
+            // Simulate data refresh
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = '🔄 Actualizando...';
+            button.disabled = true;
+
+            setTimeout(() => {
+                loadMockData();
+                initializeDashboard();
+                button.textContent = originalText;
+                button.disabled = false;
+                
+                // Update connection status
+                document.getElementById('connectionStatus').className = 'status-dot online';
+                document.getElementById('connectionText').textContent = 'Sistema Online';
+            }, 1500);
+        }
+
+        function startAutoRefresh() {
+            const interval = 30000; // 30 seconds
+            refreshIntervalId = setInterval(() => {
+                if (currentSection === 'overview') {
+                    updateOverview();
+                    drawCharts();
+                }
+            }, interval);
+        }
+
+        function saveSettings() {
+            const refreshInterval = document.getElementById('refreshInterval').value;
+            const logLimit = document.getElementById('logLimit').value;
+            
+            // Save to localStorage (in real implementation, send to backend)
+            localStorage.setItem('aiDashboardSettings', JSON.stringify({
+                refreshInterval,
+                logLimit,
+                lastUpdated: new Date().toISOString()
+            }));
+            
+            alert('Configuración guardada exitosamente');
+            
+            // Restart auto-refresh with new interval
+            clearInterval(refreshIntervalId);
+            refreshIntervalId = setInterval(updateOverview, refreshInterval * 1000);
+        }
+
+        function exportData() {
+            const data = {
+                tasks: taskData,
+                hosts: hostData,
+                exportDate: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], {
+                type: 'application/json'
+            });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ai-dashboard-export-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function drawCharts() {
+            drawToolChart();
+            drawTimeChart();
+        }
+
+        function drawToolChart() {
+            const canvas = document.getElementById('toolChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Tool distribution data
+            const tools = {'crush': 0, 'blackbox': 0, 'qwen': 0, 'gemini': 0};
+            taskData.forEach(task => tools[task.tool]++);
+            
+            const colors = ['#2196F3', '#4CAF50', '#FF9800', '#9C27B0'];
+            const toolNames = Object.keys(tools);
+            const values = Object.values(tools);
+            const total = values.reduce((a, b) => a + b, 0);
+            
+            if (total === 0) return;
+            
+            let currentAngle = 0;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(centerX, centerY) - 20;
+            
+            toolNames.forEach((tool, index) => {
+                const sliceAngle = (values[index] / total) * 2 * Math.PI;
+                
+                // Draw pie slice
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+                ctx.lineTo(centerX, centerY);
+                ctx.fillStyle = colors[index];
+                ctx.fill();
+                
+                // Draw label
+                const labelAngle = currentAngle + sliceAngle / 2;
+                const labelX = centerX + Math.cos(labelAngle) * (radius * 0.7);
+                const labelY = centerY + Math.sin(labelAngle) * (radius * 0.7);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(tool, labelX, labelY);
+                
+                currentAngle += sliceAngle;
+            });
+        }
+
+        function drawTimeChart() {
+            const canvas = document.getElementById('timeChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Mock time series data
+            const hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00'];
+            const taskCounts = [2, 5, 8, 6, 4, 3];
+            
+            const maxTasks = Math.max(...taskCounts);
+            const barWidth = (canvas.width - 60) / hours.length;
+            const maxHeight = canvas.height - 60;
+            
+            // Draw bars
+            taskCounts.forEach((count, index) => {
+                const barHeight = (count / maxTasks) * maxHeight;
+                const x = 30 + index * barWidth + 10;
+                const y = canvas.height - 30 - barHeight;
+                
+                ctx.fillStyle = '#2196F3';
+                ctx.fillRect(x, y, barWidth - 20, barHeight);
+                
+                // Draw labels
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(hours[index], x + (barWidth - 20) / 2, canvas.height - 10);
+                ctx.fillText(count.toString(), x + (barWidth - 20) / 2, y - 5);
+            });
+            
+            // Draw y-axis
+            ctx.strokeStyle = '#fff';
+            ctx.beginPath();
+            ctx.moveTo(25, 30);
+            ctx.lineTo(25, canvas.height - 30);
+            ctx.stroke();
+            
+            // Draw x-axis
+            ctx.beginPath();
+            ctx.moveTo(25, canvas.height - 30);
+            ctx.lineTo(canvas.width - 25, canvas.height - 30);
+            ctx.stroke();
+        }
+
+        // Handle form submission for new tasks
+        document.getElementById('newTaskForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const newTask = {
+                id: `task-${Date.now()}`,
+                tool: document.getElementById('taskTool').value,
+                host: document.getElementById('taskHost').value,
+                command: document.getElementById('taskCommand').value,
+                status: 'queued',
+                progress: 0,
+                startTime: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                priority: document.getElementById('taskPriority').value
+            };
+            
+            // Add parameters if provided
+            const params = document.getElementById('taskParams').value;
+            if (params.trim()) {
+                try {
+                    newTask.parameters = JSON.parse(params);
+                } catch (e) {
+                    alert('Error en formato JSON de parámetros');
+                    return;
+                }
+            }
+            
+            taskData.push(newTask);
+            updateTasks();
+            updateOverview();
+            closeNewTaskModal();
+            
+            alert(`Tarea ${newTask.id} creada exitosamente`);
+        });
+
+        function scheduleTask() {
+            alert('Función de programación de tareas en desarrollo');
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const taskModal = document.getElementById('taskModal');
+            const newTaskModal = document.getElementById('newTaskModal');
+            
+            if (event.target === taskModal) {
+                closeModal();
+            }
+            if (event.target === newTaskModal) {
+                closeNewTaskModal();
+            }
+        }
+
+        // Load saved settings on startup
+        window.addEventListener('load', function() {
+            const savedSettings = localStorage.getItem('aiDashboardSettings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                document.getElementById('refreshInterval').value = settings.refreshInterval || 30;
+                document.getElementById('logLimit').value = settings.logLimit || 100;
+            }
+        });
+    </script>
+</body>
+</html>
