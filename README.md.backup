@@ -31,7 +31,7 @@ cliente/
 
 ### Paso 1: Hacer ejecutables los scripts
 ```bash
-cd ~/cliente
+cd /home/sebastianvernis/cliente
 chmod +x *.py *.sh
 ```
 

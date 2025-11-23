@@ -32,7 +32,7 @@ Un sistema que permite ejecutar tareas de IA (Crush, Blackbox, Qwen, Gemini) en 
 ### Paso 1: En tu máquina local
 ```bash
 # Descargar archivos del sistema
-# (ya los tienes en ~/)
+# (ya los tienes en /home/sebastianvernis/)
 
 # Hacer ejecutables
 chmod +x ai-client.py install-ai-server.sh ai-server-daemon.py
